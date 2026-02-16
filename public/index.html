@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snag Loyalty POC</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Snag Loyalty POC</h1>
+      <p class="subtitle">Query user loyalty data by wallet address</p>
+    </header>
+
+    <main>
+      <!-- Wallet Input Form -->
+      <section class="input-section">
+        <form id="wallet-form">
+          <div class="form-group">
+            <label for="wallet-input">Enter Wallet Address:</label>
+            <input
+              type="text"
+              id="wallet-input"
+              placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+              required
+              pattern="^0x[a-fA-F0-9]{40}$"
+            >
+          </div>
+          <button type="submit" id="query-button">Query Loyalty Data</button>
+        </form>
+      </section>
+
+      <!-- Error Display -->
+      <div id="error-container" class="error-container" style="display: none;"></div>
+
+      <!-- Loading State -->
+      <div id="loading-container" class="loading-container" style="display: none;">
+        <div class="spinner"></div>
+        <p>Fetching loyalty data...</p>
+      </div>
+
+      <!-- Results Container -->
+      <div id="results-container" class="results-container" style="display: none;">
+        <!-- Wallet Info -->
+        <section class="wallet-info">
+          <h2>Wallet: <span id="wallet-address"></span></h2>
+        </section>
+
+        <!-- Points Section -->
+        <section class="points-section">
+          <h3>🏆 Total Points</h3>
+          <div class="points-display">
+            <span id="total-points" class="points-value">0</span>
+          </div>
+        </section>
+
+        <!-- Badges Section -->
+        <section class="badges-section">
+          <h3>🎖️ Badges (<span id="badges-count">0</span>)</h3>
+          <div id="badges-container" class="badges-container">
+            <!-- Badges will be rendered here -->
+          </div>
+        </section>
+
+        <!-- Quests Section -->
+        <section class="quests-section">
+          <h3>⚡ Quests (<span id="quests-count">0</span>)</h3>
+          <div id="quests-container" class="quests-container">
+            <!-- Quests will be rendered here -->
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <p>Snag API POC - Read-only loyalty data queries</p>
+    </footer>
+  </div>
+
+  <script src="/js/api-client.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
