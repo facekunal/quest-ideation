@@ -5,7 +5,7 @@ import { badgeService } from '../services/badgeService';
 import { questService } from '../services/questService';
 import { logger } from '../utils/logger';
 import { validateWalletAddress } from '../utils/validators';
-import { LoyaltyData, PartialLoyaltyData } from '../types/app.types';
+import { LoyaltyData } from '../types/app.types';
 
 export class LoyaltyController {
   /**
@@ -147,7 +147,7 @@ export class LoyaltyController {
    * GET /api/loyalty/quests
    */
   async getAllQuests(
-    req: Request,
+    _req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
@@ -163,7 +163,7 @@ export class LoyaltyController {
    * Health check endpoint
    * GET /health
    */
-  health(req: Request, res: Response): void {
+  health(_req: Request, res: Response): void {
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),

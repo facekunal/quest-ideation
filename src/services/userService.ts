@@ -25,8 +25,15 @@ export class UserService {
       );
 
       if (response.data && response.data.length > 0) {
-        logger.info('User found', { walletAddress, userId: response.data[0].userId });
-        return response.data[0];
+        const metadata = response.data[0];
+        // Map the nested user.id to userId for consistency
+        const userId = metadata.user?.id || metadata.userId;
+        const normalizedMetadata = {
+          ...metadata,
+          userId,
+        };
+        logger.info('User found', { walletAddress, userId });
+        return normalizedMetadata;
       }
 
       logger.info('User not found', { walletAddress });

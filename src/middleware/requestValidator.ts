@@ -7,7 +7,7 @@ import { AppError, ErrorCode } from '../types/app.types';
  */
 export function validateWalletParam(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void {
   const { walletAddress } = req.params;

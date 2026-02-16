@@ -54,7 +54,9 @@ export class SnagClient {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        const response = await fetch(url, {
+        // For Node.js fetch, we need to handle TLS properly
+        // In development, you can set NODE_TLS_REJECT_UNAUTHORIZED=0 in .env
+        const fetchOptions: RequestInit = {
           method,
           headers: {
             'X-API-KEY': this.apiKey,
@@ -62,7 +64,9 @@ export class SnagClient {
           },
           body: body ? JSON.stringify(body) : undefined,
           signal: controller.signal,
-        });
+        };
+
+        const response = await fetch(url, fetchOptions);
 
         clearTimeout(timeoutId);
 

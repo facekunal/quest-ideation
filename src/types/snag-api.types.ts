@@ -2,15 +2,19 @@
 
 // User Metadata Types
 export interface UserMetadata {
-  id: string;
+  id: string; // metadata ID
   userId: string;
   walletAddress: string;
   displayName?: string;
   logoUrl?: string;
   isBlocked: boolean;
-  userGroupId: string;
+  userGroupId: string | null;
   websiteId: string;
   organizationId: string;
+  user?: {
+    id: string;
+    walletAddress: string;
+  };
   twitterUser?: {
     id: string;
     username: string;
