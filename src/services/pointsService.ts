@@ -42,7 +42,7 @@ export class PointsService {
         walletAddress,
         total: account.amount || 0,
         userId: account.userId,
-        displayName: account.user?.displayName,
+        displayName: account.user?.userMetadata?.[0]?.displayName,
       };
 
       logger.info('Points retrieved successfully', {

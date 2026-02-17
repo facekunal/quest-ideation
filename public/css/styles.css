@@ -229,6 +229,11 @@ button:disabled {
   font-family: 'Courier New', monospace;
 }
 
+.leaderboard-username {
+  font-size: 0.85rem;
+  color: #888;
+}
+
 .leaderboard-points {
   background: #667eea;
   color: #fff;

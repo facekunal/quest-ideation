@@ -12,7 +12,7 @@ export interface LeaderboardEntry {
   accountId: string;
   userId: string;
   walletAddress: string;
-  displayName?: string;
+  username?: string;
   amount: number;
   rank?: number;
 }

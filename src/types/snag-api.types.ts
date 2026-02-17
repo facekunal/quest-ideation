@@ -42,17 +42,15 @@ export interface LoyaltyAccount {
   amount: number;
   loyaltyCurrencyId: string;
   user: {
+    id?: string;
     walletAddress: string;
-    displayName?: string;
-    logoUrl?: string;
-    twitterUser?: {
-      id: string;
-      username: string;
-    };
-    discordUser?: {
-      id: string;
-      username: string;
-    };
+    userMetadata?: Array<{
+      telegramUsername?: string;
+      twitterUser?: string;
+      discordUser?: string;
+      displayName?: string;
+      logoUrl?: string;
+    }>;
   };
 }
 
