@@ -25,14 +25,20 @@ export class LeaderboardService {
         }
       );
 
-      const entries: LeaderboardEntry[] = (response.data || []).map((account, index) => ({
-        accountId: account.id,
-        userId: account.userId,
-        walletAddress: account.user?.walletAddress,
-        displayName: account.user?.displayName,
-        amount: account.amount || 0,
-        rank: index + 1,
-      }));
+      const entries: LeaderboardEntry[] = (response.data || []).map((account, index) => {
+        const meta = account.user?.userMetadata?.[0];
+        return {
+          accountId: account.id,
+          userId: account.userId,
+          walletAddress: account.user?.walletAddress,
+          username: meta?.telegramUsername
+            || meta?.twitterUser
+            || meta?.discordUser
+            || undefined,
+          amount: account.amount || 0,
+          rank: index + 1,
+        };
+      });
 
       return {
         entries,

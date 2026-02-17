@@ -183,7 +183,8 @@ function renderLeaderboard() {
         <div class="leaderboard-row">
           <div class="leaderboard-rank">#${position}</div>
           <div class="leaderboard-user">
-            <div class="leaderboard-name">${escapeHtml(entry.displayName || shortenAddress(entry.walletAddress) || 'Anonymous')}</div>
+            <div class="leaderboard-name">${escapeHtml(shortenAddress(entry.walletAddress) || 'Anonymous')}</div>
+            ${entry.username ? `<div class="leaderboard-username">@${escapeHtml(entry.username)}</div>` : ''}
             <div class="leaderboard-wallet">${escapeHtml(shortenAddress(entry.walletAddress || 'N/A'))}</div>
           </div>
           <div class="leaderboard-points">${Number(entry.amount || 0).toLocaleString()} pts</div>
