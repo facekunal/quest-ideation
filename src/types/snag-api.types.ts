@@ -58,6 +58,13 @@ export interface LoyaltyAccount {
 
 export interface LoyaltyAccountsResponse {
   data: LoyaltyAccount[];
+  hasNextPage?: boolean;
+}
+
+export interface LoyaltyAccountRankResponse {
+  data: {
+    rank: number | string;
+  };
 }
 
 // Quest/Loyalty Rule Types

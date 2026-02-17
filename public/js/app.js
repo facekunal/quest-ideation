@@ -5,6 +5,11 @@
 // Application state
 let currentWallet = null;
 let loyaltyData = null;
+let leaderboardState = {
+  entries: [],
+  hasNextPage: false,
+  startingAfter: null,
+};
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,6 +22,16 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeApp() {
   const form = document.getElementById('wallet-form');
   form.addEventListener('submit', handleWalletSubmit);
+
+  document
+    .getElementById('leaderboard-refresh-button')
+    .addEventListener('click', () => loadLeaderboard({ reset: true }));
+
+  document
+    .getElementById('leaderboard-load-more')
+    .addEventListener('click', () => loadLeaderboard({ reset: false }));
+
+  loadLeaderboard({ reset: true });
 
   console.log('Snag Loyalty POC initialized');
 }
@@ -54,6 +69,7 @@ async function handleWalletSubmit(event) {
 
     console.log('Loyalty data received:', data);
     renderLoyaltyData(data);
+    renderWalletRank(data.points?.accountId);
 
   } catch (error) {
     console.error('Error fetching loyalty data:', error);
@@ -85,6 +101,96 @@ function renderLoyaltyData(data) {
 function renderPoints(points) {
   const totalPoints = points?.total || 0;
   document.getElementById('total-points').textContent = totalPoints.toLocaleString();
+}
+
+/**
+ * Render selected wallet rank
+ */
+async function renderWalletRank(accountId) {
+  const rankElement = document.getElementById('wallet-rank');
+
+  if (!accountId) {
+    rankElement.style.display = 'none';
+    rankElement.textContent = '';
+    return;
+  }
+
+  try {
+    const rankData = await fetchAccountRank(accountId);
+    rankElement.textContent = `Current rank: #${rankData.rank}`;
+    rankElement.style.display = 'block';
+  } catch (error) {
+    console.warn('Unable to load wallet rank:', error);
+    rankElement.style.display = 'none';
+  }
+}
+
+/**
+ * Load and render leaderboard data
+ */
+async function loadLeaderboard({ reset }) {
+  const container = document.getElementById('leaderboard-container');
+  const loadMoreButton = document.getElementById('leaderboard-load-more');
+
+  try {
+    if (reset) {
+      container.innerHTML = '<p class="empty-state">Loading leaderboard...</p>';
+      leaderboardState = {
+        entries: [],
+        hasNextPage: false,
+        startingAfter: null,
+      };
+    }
+
+    const response = await fetchLeaderboard({
+      limit: 20,
+      startingAfter: reset ? undefined : leaderboardState.startingAfter,
+    });
+
+    const incomingEntries = response.entries || [];
+    leaderboardState.entries = reset
+      ? incomingEntries
+      : [...leaderboardState.entries, ...incomingEntries];
+    leaderboardState.hasNextPage = Boolean(response.hasNextPage);
+    leaderboardState.startingAfter = incomingEntries.length > 0
+      ? incomingEntries[incomingEntries.length - 1].accountId
+      : leaderboardState.startingAfter;
+
+    renderLeaderboard();
+    loadMoreButton.style.display = leaderboardState.hasNextPage ? 'inline-block' : 'none';
+  } catch (error) {
+    console.error('Failed to load leaderboard:', error);
+    container.innerHTML = '<p class="empty-state">Unable to load leaderboard right now.</p>';
+    loadMoreButton.style.display = 'none';
+  }
+}
+
+/**
+ * Render leaderboard list
+ */
+function renderLeaderboard() {
+  const container = document.getElementById('leaderboard-container');
+
+  if (leaderboardState.entries.length === 0) {
+    container.innerHTML = '<p class="empty-state">No leaderboard entries found</p>';
+    return;
+  }
+
+  container.innerHTML = leaderboardState.entries
+    .map((entry, index) => {
+      const position = index + 1;
+      return `
+        <div class="leaderboard-row">
+          <div class="leaderboard-rank">#${position}</div>
+          <div class="leaderboard-user">
+            <div class="leaderboard-name">${escapeHtml(entry.displayName || shortenAddress(entry.walletAddress) || 'Anonymous')}</div>
+            <div class="leaderboard-wallet">${escapeHtml(shortenAddress(entry.walletAddress || 'N/A'))}</div>
+          </div>
+          <div class="leaderboard-points">${Number(entry.amount || 0).toLocaleString()} pts</div>
+        </div>
+      `;
+    })
+    .join('');
 }
 
 /**

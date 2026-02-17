@@ -27,6 +27,7 @@ export class PointsService {
       if (!response.data || response.data.length === 0) {
         logger.info('No points found for wallet', { walletAddress });
         return {
+          accountId: undefined,
           walletAddress,
           total: 0,
           userId: '',
@@ -37,6 +38,7 @@ export class PointsService {
       const account = response.data[0];
 
       const pointsData: PointsData = {
+        accountId: account.id,
         walletAddress,
         total: account.amount || 0,
         userId: account.userId,
