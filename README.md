@@ -10,6 +10,7 @@ A proof-of-concept demonstrating Snag API integration for querying user loyalty 
 ✅ **Badges** - Displays earned badges with award timestamps
 ✅ **Social Quests** - Lists all quests with completion status
 ✅ **Dynamic Quest Rules** - Fetches quest rules from Snag API (not hard-coded)
+✅ **Leaderboard** - Displays top accounts by points with pagination
 ✅ **Error Handling** - Graceful degradation with partial data display
 
 ## Tech Stack
@@ -97,6 +98,8 @@ http://localhost:3000
 | `/api/loyalty/badges/:walletAddress` | GET | Get badges only |
 | `/api/loyalty/quests/:walletAddress` | GET | Get quests with status |
 | `/api/loyalty/quests` | GET | Get all available quest rules |
+| `/api/loyalty/leaderboard` | GET | Get leaderboard entries sorted by points |
+| `/api/loyalty/leaderboard/rank/:accountId` | GET | Get rank for a specific loyalty account |
 
 ### Example API Calls
 
@@ -261,8 +264,7 @@ CACHE_ENABLED=true
 1. **Read-Only:** POC only queries data, does not complete quests or award badges
 2. **No Wallet Signature:** Direct wallet input, no authentication required
 3. **Points Breakdown:** API doesn't provide breakdown by source (bets/referrals/quests)
-4. **Leaderboard:** Ranking not implemented in this POC
-5. **Badge Awards:** Relies on badge-type loyalty rules (may not cover all badge scenarios)
+4. **Badge Awards:** Relies on badge-type loyalty rules (may not cover all badge scenarios)
 
 ### User Group ID
 

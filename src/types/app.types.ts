@@ -1,10 +1,33 @@
 // Application Domain Types
 
 export interface PointsData {
+  accountId?: string;
   walletAddress: string;
   total: number;
   userId: string;
   displayName?: string;
+}
+
+export interface LeaderboardEntry {
+  accountId: string;
+  userId: string;
+  walletAddress: string;
+  username?: string;
+  amount: number;
+  rank?: number;
+}
+
+export interface LeaderboardData {
+  entries: LeaderboardEntry[];
+  hasNextPage: boolean;
+  limit: number;
+  startingAfter?: string;
+  loyaltyCurrencyId?: string;
+}
+
+export interface AccountRankData {
+  accountId: string;
+  rank: number | string;
 }
 
 export interface UserBadge {

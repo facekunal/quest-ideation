@@ -53,6 +53,23 @@
           <div class="points-display">
             <span id="total-points" class="points-value">0</span>
           </div>
+          <p id="wallet-rank" class="wallet-rank" style="display: none;"></p>
+        </section>
+
+        <!-- Leaderboard Section -->
+        <section class="leaderboard-section">
+          <div class="leaderboard-header">
+            <h3>📈 Snag Leaderboard</h3>
+            <button type="button" id="leaderboard-refresh-button" class="secondary-button">Refresh</button>
+          </div>
+          <div id="leaderboard-container" class="leaderboard-container">
+            <!-- Leaderboard entries will be rendered here -->
+          </div>
+          <div class="leaderboard-pagination">
+            <button type="button" id="leaderboard-load-more" class="secondary-button" style="display: none;">
+              Load more
+            </button>
+          </div>
         </section>
 
         <!-- Badges Section -->

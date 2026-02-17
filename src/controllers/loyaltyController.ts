@@ -3,6 +3,7 @@ import { userService } from '../services/userService';
 import { pointsService } from '../services/pointsService';
 import { badgeService } from '../services/badgeService';
 import { questService } from '../services/questService';
+import { leaderboardService } from '../services/leaderboardService';
 import { logger } from '../utils/logger';
 import { validateWalletAddress } from '../utils/validators';
 import { LoyaltyData } from '../types/app.types';
@@ -68,6 +69,54 @@ export class LoyaltyController {
       });
 
       res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get leaderboard entries sorted by points (amount desc)
+   * GET /api/loyalty/leaderboard
+   */
+  async getLeaderboard(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const startingAfter = typeof req.query.startingAfter === 'string'
+        ? req.query.startingAfter
+        : undefined;
+      const loyaltyCurrencyId = typeof req.query.loyaltyCurrencyId === 'string'
+        ? req.query.loyaltyCurrencyId
+        : undefined;
+
+      const leaderboard = await leaderboardService.getLeaderboard({
+        limit,
+        startingAfter,
+        loyaltyCurrencyId,
+      });
+
+      res.json(leaderboard);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get rank for a specific account id
+   * GET /api/loyalty/leaderboard/rank/:accountId
+   */
+  async getAccountRank(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { accountId } = req.params;
+      const rankData = await leaderboardService.getAccountRank(accountId);
+      res.json(rankData);
     } catch (error) {
       next(error);
     }
