@@ -37,4 +37,14 @@ router.get(
   loyaltyController.getAllQuests.bind(loyaltyController)
 );
 
+router.get(
+  '/api/loyalty/leaderboard',
+  loyaltyController.getLeaderboard.bind(loyaltyController)
+);
+
+router.get(
+  '/api/loyalty/leaderboard/rank/:accountId',
+  loyaltyController.getAccountRank.bind(loyaltyController)
+);
+
 export default router;

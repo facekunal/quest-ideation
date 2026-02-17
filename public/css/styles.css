@@ -106,6 +106,12 @@ button:disabled {
   transform: none;
 }
 
+.secondary-button {
+  width: auto;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+}
+
 /* Error Container */
 .error-container {
   background: #fee;
@@ -165,6 +171,76 @@ button:disabled {
 .wallet-info span {
   color: #667eea;
   font-family: 'Courier New', monospace;
+}
+
+.wallet-rank {
+  margin-top: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Leaderboard Section */
+.leaderboard-section {
+  margin-bottom: 30px;
+}
+
+.leaderboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 12px;
+}
+
+.leaderboard-header h3 {
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.leaderboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.leaderboard-rank {
+  font-weight: 700;
+  color: #667eea;
+}
+
+.leaderboard-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.leaderboard-wallet {
+  font-size: 0.85rem;
+  color: #777;
+  font-family: 'Courier New', monospace;
+}
+
+.leaderboard-points {
+  background: #667eea;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.leaderboard-pagination {
+  margin-top: 14px;
+  text-align: center;
 }
 
 /* Points Section */
@@ -378,5 +454,14 @@ footer {
 
   .quest-points {
     align-self: flex-end;
+  }
+
+  .leaderboard-row {
+    grid-template-columns: 52px 1fr;
+  }
+
+  .leaderboard-points {
+    grid-column: 1 / -1;
+    justify-self: flex-start;
   }
 }
