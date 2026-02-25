@@ -25,7 +25,9 @@ export class SnagClient {
   ): Promise<T> {
     logger.info(`snagClient: GET ${endpoint}`, { params });
     const url = this.buildUrl(endpoint, params);
-    return this.request<T>('GET', url, undefined, options);
+    const result = await this.request<T>('GET', url, undefined, options);
+    logger.debug(`GET ${endpoint} response`, { data: result });
+    return result;
   }
 
   async post<T>(
@@ -35,7 +37,9 @@ export class SnagClient {
   ): Promise<T> {
     logger.debug(`POST ${endpoint}`, { body });
     const url = this.buildUrl(endpoint);
-    return this.request<T>('POST', url, body, options);
+    const result = await this.request<T>('POST', url, body, options);
+    logger.debug(`POST ${endpoint} response`, { data: result });
+    return result;
   }
 
   private async request<T>(
