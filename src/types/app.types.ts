@@ -43,6 +43,9 @@ export interface QuestWithStatus {
   resetAt?: string;
   nextStreakMilestone?: number;
   nextStreakBonus?: number;
+  pointsAwarded?: number;   // total points earned across all completions (includes streak bonuses)
+  ctaHref?: string;         // action URL (e.g. Discord invite link)
+  completionCount?: number; // number of times completed (= current streak for daily quests)
 }
 
 export interface LoyaltyData {

@@ -118,30 +118,66 @@ export class QuestService {
         limit: 100,
       });
 
-      // Build a set of completed rule IDs for O(1) lookup
-      // Presence of a transaction entry for a rule ID means the user completed it
-      const completedRuleIds = new Set(
-        statusResponse.data
-          .map((e) => e.loyaltyTransaction?.loyaltyRule?.id)
-          .filter((id): id is string => Boolean(id))
-      );
+      // Aggregate all entries per rule ID — repeatable quests (e.g. daily check-in) can have
+      // multiple entries. We sum points and keep the most recent timestamps.
+      interface EntryAggregate {
+        completedAt: string;
+        pointsAwarded: number;
+        ctaHref?: string;
+        resetAt?: string;
+        completionCount: number;
+      }
+
+      const completedByRuleId = new Map<string, EntryAggregate>();
+
+      for (const entry of statusResponse.data) {
+        const ruleId = entry.loyaltyTransaction?.loyaltyRule?.id;
+        if (!ruleId) continue;
+
+        const pointsForEntry = Math.round(Number(entry.amount) / 1_000_000);
+        const existing = completedByRuleId.get(ruleId);
+
+        if (!existing) {
+          completedByRuleId.set(ruleId, {
+            completedAt: entry.createdAt,
+            pointsAwarded: pointsForEntry,
+            ctaHref: entry.loyaltyTransaction?.loyaltyRule?.metadata?.cta?.href,
+            resetAt: entry.idempotencyKeyExpiresAt ?? undefined,
+            completionCount: 1,
+          });
+        } else {
+          existing.pointsAwarded += pointsForEntry;
+          existing.completionCount += 1;
+          if (entry.createdAt > existing.completedAt) {
+            existing.completedAt = entry.createdAt;
+            existing.resetAt = entry.idempotencyKeyExpiresAt ?? undefined;
+          }
+        }
+      }
 
       logger.debug('Quest statuses fetched', {
         walletAddress,
         total: rules.length,
-        completed: completedRuleIds.size,
+        completed: completedByRuleId.size,
       });
 
-      // Combine rule metadata with status
+      // Combine rule metadata with status and aggregated entry data
       const questsWithStatus: QuestWithStatus[] = rules.map(rule => {
+        const agg = completedByRuleId.get(rule.id);
         return {
           id: rule.id,
           name: rule.name,
           description: rule.description,
           type: rule.type,
           points: rule.amount || 0,
-          status: completedRuleIds.has(rule.id) ? 'completed' : 'pending',
+          status: agg ? 'completed' : 'pending',
           frequency: rule.frequency,
+          completedAt: agg?.completedAt,
+          pointsAwarded: agg?.pointsAwarded,
+          ctaHref: agg?.ctaHref,
+          resetAt: agg?.resetAt,
+          streakCount: agg?.completionCount,
+          completionCount: agg?.completionCount,
         };
       });
 

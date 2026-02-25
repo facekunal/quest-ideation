@@ -221,7 +221,13 @@ function createQuestItem(quest) {
 
   const statusIcon = getStatusIcon(quest.status);
   const statusText = getStatusText(quest);
-  const checkInExtra = quest.type === 'check_in' ? buildCheckInInfo(quest) : '';
+  const repeatableExtra = buildRepeatableInfo(quest);
+  const pointsDisplay = quest.pointsAwarded != null
+    ? `+${quest.pointsAwarded} pts earned`
+    : `+${quest.points} pts`;
+  const ctaLink = quest.status === 'pending' && quest.ctaHref
+    ? `<a class="quest-cta" href="${quest.ctaHref}" target="_blank" rel="noopener noreferrer">Go →</a>`
+    : '';
 
   item.innerHTML = `
     <div class="quest-header">
@@ -229,11 +235,12 @@ function createQuestItem(quest) {
         <span class="quest-icon">${statusIcon}</span>
         <span class="quest-name">${escapeHtml(quest.name)}</span>
       </div>
-      <span class="quest-points">+${quest.points} pts</span>
+      <span class="quest-points">${pointsDisplay}</span>
     </div>
     ${quest.description ? `<div class="quest-description">${escapeHtml(quest.description)}</div>` : ''}
     <div class="quest-status">${statusText}</div>
-    ${checkInExtra}
+    ${ctaLink}
+    ${repeatableExtra}
   `;
 
   return item;
@@ -257,7 +264,8 @@ function getStatusIcon(status) {
  */
 function getStatusText(quest) {
   if (quest.status === 'completed' && quest.completedAt) {
-    return `Completed: ${formatDate(quest.completedAt)}`;
+    const pts = quest.pointsAwarded != null ? ` · ${quest.pointsAwarded} pts earned` : '';
+    return `Completed: ${formatDate(quest.completedAt)}${pts}`;
   }
 
   const statusLabels = {
@@ -271,9 +279,9 @@ function getStatusText(quest) {
 }
 
 /**
- * Build check-in specific info (streak, reset timer, milestone)
+ * Build repeatable quest info (streak, reset timer, milestone) — shown for any quest type
  */
-function buildCheckInInfo(quest) {
+function buildRepeatableInfo(quest) {
   const parts = [];
 
   if (quest.streakCount != null) {

@@ -110,9 +110,16 @@ export interface LoyaltyRuleGroupsResponse {
 // Transaction Entries (GET /api/loyalty/transaction_entries)
 export interface TransactionEntry {
   id: string;
+  amount: string;                         // scaled integer string, ÷1_000_000 = actual points
+  createdAt: string;                      // ISO timestamp of completion
+  idempotencyKeyExpiresAt: string | null; // when this completion expires (repeatable quests only)
   loyaltyTransaction?: {
     loyaltyRule?: {
       id: string;
+      metadata?: {
+        cta?: { href?: string };
+        [key: string]: any;
+      };
     };
   };
 }

@@ -418,6 +418,22 @@ button:disabled {
   font-size: 0.85rem;
 }
 
+.quest-cta {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 12px;
+  background: #1976d2;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.quest-cta:hover {
+  background: #1565c0;
+}
+
 /* Footer */
 footer {
   background: #f8f9fa;
