@@ -26,7 +26,7 @@ export class SnagClient {
     logger.info(`snagClient: GET ${endpoint}`, { params });
     const url = this.buildUrl(endpoint, params);
     const result = await this.request<T>('GET', url, undefined, options);
-    logger.debug(`GET ${endpoint} response`, { data: result });
+    logger.info(`GET ${endpoint} response`, { data: result });
     return result;
   }
 
@@ -35,10 +35,10 @@ export class SnagClient {
     body: Record<string, any>,
     options: RequestOptions = {}
   ): Promise<T> {
-    logger.debug(`POST ${endpoint}`, { body });
+    logger.info(`POST ${endpoint}`, { body });
     const url = this.buildUrl(endpoint);
     const result = await this.request<T>('POST', url, body, options);
-    logger.debug(`POST ${endpoint} response`, { data: result });
+    logger.info(`POST ${endpoint} response`, { data: result });
     return result;
   }
 

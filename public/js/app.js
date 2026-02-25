@@ -31,8 +31,6 @@ function initializeApp() {
     .getElementById('leaderboard-load-more')
     .addEventListener('click', () => loadLeaderboard({ reset: false }));
 
-  loadLeaderboard({ reset: true });
-
   console.log('Snag Loyalty POC initialized');
 }
 
