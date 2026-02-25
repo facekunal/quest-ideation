@@ -196,21 +196,19 @@ This uses the following Snag API endpoints:
 Quests are fetched dynamically (not hard-coded):
 
 ```typescript
-// 1. Fetch all active quest rules
-const rules = await snagClient.get('/api/loyalty/rules', {
-  organizationId, websiteId, isActive: true
-});
+// 1. Fetch all active quest rules + completed statuses in parallel
+const [rules, statusResponse] = await Promise.all([
+  snagClient.get('/api/loyalty/rules', { organizationId, websiteId, isActive: true }),
+  snagClient.get('/api/loyalty/rules/status', { userId, organizationId, websiteId }),
+]);
 
-// 2. Check completion status for each quest
-const statuses = await Promise.all(
-  rules.map(rule => checkQuestStatus(walletAddress, rule.id))
-);
+// 2. Build set of completed rule IDs
+const completedRuleIds = new Set(statusResponse.data.map(e => e.loyaltyRuleId));
 
 // 3. Combine rule metadata + status
-const quests = rules.map((rule, i) => ({
+const quests = rules.map(rule => ({
   ...rule,
-  status: statuses[i].status,
-  completedAt: statuses[i].completedAt
+  status: completedRuleIds.has(rule.id) ? 'completed' : 'pending',
 }));
 ```
 
@@ -219,23 +217,18 @@ const quests = rules.map((rule, i) => ({
 Badges are filtered by checking badge-type loyalty rules:
 
 ```typescript
-// 1. Get all badges
-const allBadges = await snagClient.get('/api/loyalty/badges');
+// 1. Fetch badges, badge rules, and completed statuses in parallel
+const [allBadges, badgeRules, statusResponse] = await Promise.all([
+  snagClient.get('/api/loyalty/badges'),
+  snagClient.get('/api/loyalty/rules', { rewardType: 'badge' }),
+  snagClient.get('/api/loyalty/rules/status', { userId, organizationId, websiteId }),
+]);
 
-// 2. Get badge-type loyalty rules
-const badgeRules = await snagClient.get('/api/loyalty/rules', {
-  rewardType: 'badge'
-});
-
-// 3. Check which badge rules user has completed
-const completedBadges = badgeRules.filter(rule =>
-  checkQuestStatus(walletAddress, rule.id).status === 'completed'
-);
-
-// 4. Map to badge metadata
-const userBadges = completedBadges.map(rule =>
-  allBadges.find(b => b.id === rule.badgeId)
-);
+// 2. Filter to completed badge rules and map to badge metadata
+const completedRuleIds = new Set(statusResponse.data.map(e => e.loyaltyRuleId));
+const userBadges = badgeRules
+  .filter(rule => completedRuleIds.has(rule.id) && rule.badgeId)
+  .map(rule => allBadges.find(b => b.id === rule.badgeId));
 ```
 
 ## Error Handling
