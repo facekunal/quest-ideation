@@ -122,21 +122,6 @@ export interface TransactionEntriesResponse {
   hasNextPage?: boolean;
 }
 
-// Rule Statuses (GET /api/loyalty/rule_statuses)
-export interface RuleStatus {
-  id: string;
-  loyaltyRuleId: string;
-  userId: string;
-  progress: number; // 0–100
-  organizationId: string;
-  websiteId: string;
-}
-
-export interface RuleStatusesResponse {
-  data: RuleStatus[];
-  hasNextPage?: boolean;
-}
-
 // Generic Snag API Response
 export interface SnagApiResponse<T> {
   data: T;

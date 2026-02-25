@@ -6,7 +6,6 @@ import {
   LoyaltyRule,
   LoyaltyRuleGroupsResponse,
   TransactionEntriesResponse,
-  RuleStatusesResponse,
 } from '../types/snag-api.types';
 
 interface CacheEntry<T> {
@@ -111,34 +110,13 @@ export class QuestService {
         return [];
       }
 
-      const [statusResult, progressResult] = await Promise.allSettled([
-        snagClient.get<TransactionEntriesResponse>('/api/loyalty/transaction_entries', {
-          userId,
-          organizationId: snagConfig.organizationId,
-          websiteId: snagConfig.websiteId,
-          userCompletedLoyaltyRuleId: rules.map(r => r.id),
-          limit: 100,
-        }),
-        snagClient.get<RuleStatusesResponse>('/api/loyalty/rule_statuses', {
-          userId,
-          organizationId: snagConfig.organizationId,
-          websiteId: snagConfig.websiteId,
-          limit: 100,
-        }),
-      ]);
-
-      if (statusResult.status === 'rejected') {
-        throw statusResult.reason;
-      }
-
-      if (progressResult.status === 'rejected') {
-        logger.warn('Failed to fetch rule statuses (progress will be omitted)', {
-          error: progressResult.reason?.message,
-        });
-      }
-
-      const statusResponse = statusResult.value;
-      const progressData = progressResult.status === 'fulfilled' ? progressResult.value.data : [];
+      const statusResponse = await snagClient.get<TransactionEntriesResponse>('/api/loyalty/transaction_entries', {
+        userId,
+        organizationId: snagConfig.organizationId,
+        websiteId: snagConfig.websiteId,
+        userCompletedLoyaltyRuleId: rules.map(r => r.id),
+        limit: 100,
+      });
 
       // Build a set of completed rule IDs for O(1) lookup
       // Presence of a transaction entry for a rule ID means the user completed it
@@ -146,10 +124,6 @@ export class QuestService {
         statusResponse.data
           .map((e) => e.loyaltyTransaction?.loyaltyRule?.id)
           .filter((id): id is string => Boolean(id))
-      );
-
-      const progressByRuleId = new Map(
-        progressData.map(s => [s.loyaltyRuleId, s.progress])
       );
 
       logger.debug('Quest statuses fetched', {
@@ -168,7 +142,6 @@ export class QuestService {
           points: rule.amount || 0,
           status: completedRuleIds.has(rule.id) ? 'completed' : 'pending',
           frequency: rule.frequency,
-          progress: progressByRuleId.get(rule.id),
         };
       });
 

@@ -43,7 +43,6 @@ export interface QuestWithStatus {
   resetAt?: string;
   nextStreakMilestone?: number;
   nextStreakBonus?: number;
-  progress?: number; // 0–100, from rule_statuses (only present for rules with progress tracking)
 }
 
 export interface LoyaltyData {
