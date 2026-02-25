@@ -8,6 +8,31 @@ import {
   TransactionEntriesResponse,
 } from '../types/snag-api.types';
 
+/**
+ * Compute the next reset time for a repeatable quest based on its frequency.
+ * Returns undefined for one-time quests or unknown frequencies.
+ */
+function computeResetAt(completedAt: string, frequency?: string): string | undefined {
+  if (!frequency) return undefined;
+
+  const date = new Date(completedAt);
+
+  switch (frequency.toLowerCase()) {
+    case 'daily': {
+      // Start of next UTC day
+      date.setUTCHours(24, 0, 0, 0);
+      return date.toISOString();
+    }
+    case 'weekly': {
+      date.setUTCDate(date.getUTCDate() + 7);
+      date.setUTCHours(0, 0, 0, 0);
+      return date.toISOString();
+    }
+    default:
+      return undefined;
+  }
+}
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -124,7 +149,6 @@ export class QuestService {
         completedAt: string;
         pointsAwarded: number;
         ctaHref?: string;
-        resetAt?: string;
         completionCount: number;
       }
 
@@ -142,7 +166,6 @@ export class QuestService {
             completedAt: entry.createdAt,
             pointsAwarded: pointsForEntry,
             ctaHref: entry.loyaltyTransaction?.loyaltyRule?.metadata?.cta?.href,
-            resetAt: entry.idempotencyKeyExpiresAt ?? undefined,
             completionCount: 1,
           });
         } else {
@@ -150,7 +173,6 @@ export class QuestService {
           existing.completionCount += 1;
           if (entry.createdAt > existing.completedAt) {
             existing.completedAt = entry.createdAt;
-            existing.resetAt = entry.idempotencyKeyExpiresAt ?? undefined;
           }
         }
       }
@@ -175,7 +197,7 @@ export class QuestService {
           completedAt: agg?.completedAt,
           pointsAwarded: agg?.pointsAwarded,
           ctaHref: agg?.ctaHref,
-          resetAt: agg?.resetAt,
+          resetAt: agg ? computeResetAt(agg.completedAt, rule.frequency) : undefined,
           streakCount: agg?.completionCount,
           completionCount: agg?.completionCount,
         };
