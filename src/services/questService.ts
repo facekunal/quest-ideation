@@ -84,6 +84,7 @@ export class QuestService {
    */
   async getQuestsWithStatus(walletAddress: string, userId: string): Promise<QuestWithStatus[]> {
     try {
+      logger.info('QuestService: getQuestsWithStatus for ', walletAddress)
       // Fetch all quest rules and completed statuses in parallel
       const [rules, statusResponse] = await Promise.all([
         this.getAllQuestRules(),

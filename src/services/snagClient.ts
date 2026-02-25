@@ -23,7 +23,7 @@ export class SnagClient {
     params?: Record<string, any>,
     options: RequestOptions = {}
   ): Promise<T> {
-    logger.debug(`GET ${endpoint}`, { params });
+    logger.info(`snagClient: GET ${endpoint}`, { params });
     const url = this.buildUrl(endpoint, params);
     return this.request<T>('GET', url, undefined, options);
   }
