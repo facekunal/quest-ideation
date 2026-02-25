@@ -31,8 +31,6 @@ function initializeApp() {
     .getElementById('leaderboard-load-more')
     .addEventListener('click', () => loadLeaderboard({ reset: false }));
 
-  loadLeaderboard({ reset: true });
-
   console.log('Snag Loyalty POC initialized');
 }
 
@@ -88,7 +86,6 @@ function renderLoyaltyData(data) {
 
   // Render each section
   renderPoints(data.points);
-  renderBadges(data.badges);
   renderQuests(data.quests);
 
   // Show results container
@@ -195,50 +192,6 @@ function renderLeaderboard() {
 }
 
 /**
- * Render badges section
- */
-function renderBadges(badges) {
-  const container = document.getElementById('badges-container');
-  const countElement = document.getElementById('badges-count');
-
-  container.innerHTML = '';
-  countElement.textContent = badges.length;
-
-  if (badges.length === 0) {
-    container.innerHTML = '<p class="empty-state">No badges earned yet</p>';
-    return;
-  }
-
-  badges.forEach(badge => {
-    const badgeCard = createBadgeCard(badge);
-    container.appendChild(badgeCard);
-  });
-}
-
-/**
- * Create badge card element
- */
-function createBadgeCard(badge) {
-  const card = document.createElement('div');
-  card.className = 'badge-card';
-
-  const iconHtml = badge.imageUrl
-    ? `<img src="${badge.imageUrl}" alt="${badge.name}">`
-    : '🏅';
-
-  card.innerHTML = `
-    <div class="badge-icon">${iconHtml}</div>
-    <div class="badge-info">
-      <h4>${escapeHtml(badge.name)}</h4>
-      ${badge.description ? `<p>${escapeHtml(badge.description)}</p>` : ''}
-      <span class="badge-date">Earned: ${formatDate(badge.awardedAt)}</span>
-    </div>
-  `;
-
-  return card;
-}
-
-/**
  * Render quests section
  */
 function renderQuests(quests) {
@@ -268,6 +221,13 @@ function createQuestItem(quest) {
 
   const statusIcon = getStatusIcon(quest.status);
   const statusText = getStatusText(quest);
+  const repeatableExtra = buildRepeatableInfo(quest);
+  const pointsDisplay = quest.pointsAwarded != null
+    ? `+${quest.pointsAwarded} pts earned`
+    : `+${quest.points} pts`;
+  const ctaLink = quest.status === 'pending' && quest.ctaHref
+    ? `<a class="quest-cta" href="${quest.ctaHref}" target="_blank" rel="noopener noreferrer">Go →</a>`
+    : '';
 
   item.innerHTML = `
     <div class="quest-header">
@@ -275,10 +235,12 @@ function createQuestItem(quest) {
         <span class="quest-icon">${statusIcon}</span>
         <span class="quest-name">${escapeHtml(quest.name)}</span>
       </div>
-      <span class="quest-points">+${quest.points} pts</span>
+      <span class="quest-points">${pointsDisplay}</span>
     </div>
     ${quest.description ? `<div class="quest-description">${escapeHtml(quest.description)}</div>` : ''}
     <div class="quest-status">${statusText}</div>
+    ${ctaLink}
+    ${repeatableExtra}
   `;
 
   return item;
@@ -302,7 +264,8 @@ function getStatusIcon(status) {
  */
 function getStatusText(quest) {
   if (quest.status === 'completed' && quest.completedAt) {
-    return `Completed: ${formatDate(quest.completedAt)}`;
+    const pts = quest.pointsAwarded != null ? ` · ${quest.pointsAwarded} pts earned` : '';
+    return `Completed: ${formatDate(quest.completedAt)}${pts}`;
   }
 
   const statusLabels = {
@@ -313,6 +276,46 @@ function getStatusText(quest) {
   };
 
   return `Status: ${statusLabels[quest.status] || 'Unknown'}`;
+}
+
+/**
+ * Build repeatable quest info (streak, reset timer, milestone) — shown for any quest type
+ */
+function buildRepeatableInfo(quest) {
+  const parts = [];
+
+  if (quest.streakCount != null) {
+    parts.push(`<span class="streak-badge">🔥 ${quest.streakCount}-day streak</span>`);
+  }
+
+  if (quest.resetAt) {
+    const timeLeft = getTimeUntil(quest.resetAt);
+    if (timeLeft) {
+      parts.push(`<span class="reset-timer">Resets in ${timeLeft}</span>`);
+    }
+  }
+
+  if (quest.nextStreakMilestone != null) {
+    parts.push(
+      `<span class="streak-milestone">Next milestone: ${quest.nextStreakMilestone} days → +${quest.nextStreakBonus} pts</span>`
+    );
+  }
+
+  return parts.length > 0 ? `<div class="check-in-info">${parts.join('')}</div>` : '';
+}
+
+/**
+ * Get human-readable time remaining until an ISO timestamp
+ */
+function getTimeUntil(isoString) {
+  const diff = new Date(isoString) - new Date();
+  if (diff <= 0) return null;
+
+  const hours = Math.floor(diff / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
 }
 
 /**

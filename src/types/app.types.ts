@@ -30,14 +30,6 @@ export interface AccountRankData {
   rank: number | string;
 }
 
-export interface UserBadge {
-  id: string;
-  name: string;
-  description?: string;
-  imageUrl?: string;
-  awardedAt: string;
-}
-
 export interface QuestWithStatus {
   id: string;
   name: string;
@@ -46,6 +38,14 @@ export interface QuestWithStatus {
   points: number;
   status: 'completed' | 'pending' | 'failed' | 'unknown';
   completedAt?: string;
+  frequency?: string;
+  streakCount?: number;
+  resetAt?: string;
+  nextStreakMilestone?: number;
+  nextStreakBonus?: number;
+  pointsAwarded?: number;   // total points earned across all completions (includes streak bonuses)
+  ctaHref?: string;         // action URL (e.g. Discord invite link)
+  completionCount?: number; // number of times completed (= current streak for daily quests)
 }
 
 export interface LoyaltyData {
@@ -57,7 +57,6 @@ export interface LoyaltyData {
   points: {
     total: number;
   };
-  badges: UserBadge[];
   quests: QuestWithStatus[];
 }
 
@@ -71,8 +70,6 @@ export interface PartialLoyaltyData {
     total: number;
   };
   pointsError?: string | null;
-  badges?: UserBadge[];
-  badgesError?: string | null;
   quests?: QuestWithStatus[];
   questsError?: string | null;
 }
@@ -91,7 +88,6 @@ export enum ErrorCode {
 
   // Service-specific
   POINTS_FETCH_FAILED = 'POINTS_FETCH_FAILED',
-  BADGES_FETCH_FAILED = 'BADGES_FETCH_FAILED',
   QUESTS_FETCH_FAILED = 'QUESTS_FETCH_FAILED',
 
   // Configuration

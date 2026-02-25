@@ -21,12 +21,6 @@ router.get(
 );
 
 router.get(
-  '/api/loyalty/badges/:walletAddress',
-  validateWalletParam,
-  loyaltyController.getBadges.bind(loyaltyController)
-);
-
-router.get(
   '/api/loyalty/quests/:walletAddress',
   validateWalletParam,
   loyaltyController.getQuests.bind(loyaltyController)

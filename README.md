@@ -1,13 +1,12 @@
 # Snag API POC
 
-A proof-of-concept demonstrating Snag API integration for querying user loyalty data (points, badges, social quests) by wallet address without wallet provider popups.
+A proof-of-concept demonstrating Snag API integration for querying user loyalty data (points, social quests) by wallet address without wallet provider popups.
 
 ## Features
 
 ✅ **Direct Wallet Input** - Query loyalty data by entering any wallet address
 ✅ **Auto-Create Users** - Automatically creates Snag users if wallet doesn't exist
 ✅ **Points Display** - Shows total loyalty points balance
-✅ **Badges** - Displays earned badges with award timestamps
 ✅ **Social Quests** - Lists all quests with completion status
 ✅ **Dynamic Quest Rules** - Fetches quest rules from Snag API (not hard-coded)
 ✅ **Leaderboard** - Displays top accounts by points with pagination
@@ -93,9 +92,8 @@ http://localhost:3000
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check endpoint |
-| `/api/loyalty/wallet/:walletAddress` | GET | Get all loyalty data (points + badges + quests) |
+| `/api/loyalty/wallet/:walletAddress` | GET | Get all loyalty data (points + quests) |
 | `/api/loyalty/points/:walletAddress` | GET | Get points only |
-| `/api/loyalty/badges/:walletAddress` | GET | Get badges only |
 | `/api/loyalty/quests/:walletAddress` | GET | Get quests with status |
 | `/api/loyalty/quests` | GET | Get all available quest rules |
 | `/api/loyalty/leaderboard` | GET | Get leaderboard entries sorted by points |
@@ -132,7 +130,6 @@ snag-api-poc/
 │   │   ├── snagClient.ts            # HTTP client with auth & retries
 │   │   ├── userService.ts           # User lookup & auto-creation
 │   │   ├── pointsService.ts         # Points queries
-│   │   ├── badgeService.ts          # Badge queries
 │   │   └── questService.ts          # Quest rules & status
 │   ├── controllers/
 │   │   └── loyaltyController.ts     # Request handlers
@@ -168,10 +165,9 @@ snag-api-poc/
 4. **User auto-creation:** If wallet doesn't exist in Snag, a new user is created
 5. **Parallel data fetching:**
    - Points from `/api/loyalty/accounts`
-   - Badges via badge-type loyalty rules
    - Quests from `/api/loyalty/rules` with status checks
 6. **Response aggregation:** All data combined into single response
-7. **Frontend renders** points, badges, and quests with status icons
+7. **Frontend renders** points and quests with status icons
 
 ### Auto-Create Users
 
@@ -196,53 +192,27 @@ This uses the following Snag API endpoints:
 Quests are fetched dynamically (not hard-coded):
 
 ```typescript
-// 1. Fetch all active quest rules
-const rules = await snagClient.get('/api/loyalty/rules', {
-  organizationId, websiteId, isActive: true
-});
+// 1. Fetch all active quest rules + completed statuses in parallel
+const [rules, statusResponse] = await Promise.all([
+  snagClient.get('/api/loyalty/rules', { organizationId, websiteId, isActive: true }),
+  snagClient.get('/api/loyalty/rules/status', { userId, organizationId, websiteId }),
+]);
 
-// 2. Check completion status for each quest
-const statuses = await Promise.all(
-  rules.map(rule => checkQuestStatus(walletAddress, rule.id))
-);
+// 2. Build set of completed rule IDs
+const completedRuleIds = new Set(statusResponse.data.map(e => e.loyaltyRuleId));
 
 // 3. Combine rule metadata + status
-const quests = rules.map((rule, i) => ({
+const quests = rules.map(rule => ({
   ...rule,
-  status: statuses[i].status,
-  completedAt: statuses[i].completedAt
+  status: completedRuleIds.has(rule.id) ? 'completed' : 'pending',
 }));
-```
-
-### Badge Filtering
-
-Badges are filtered by checking badge-type loyalty rules:
-
-```typescript
-// 1. Get all badges
-const allBadges = await snagClient.get('/api/loyalty/badges');
-
-// 2. Get badge-type loyalty rules
-const badgeRules = await snagClient.get('/api/loyalty/rules', {
-  rewardType: 'badge'
-});
-
-// 3. Check which badge rules user has completed
-const completedBadges = badgeRules.filter(rule =>
-  checkQuestStatus(walletAddress, rule.id).status === 'completed'
-);
-
-// 4. Map to badge metadata
-const userBadges = completedBadges.map(rule =>
-  allBadges.find(b => b.id === rule.badgeId)
-);
 ```
 
 ## Error Handling
 
 The POC implements graceful error handling:
 
-- **Partial Data Display:** If one service fails (e.g., badges), other data (points, quests) is still shown
+- **Partial Data Display:** If one service fails (e.g., points), other data (quests) is still shown
 - **Retry Logic:** Snag API calls retry up to 2 times on 5xx errors with exponential backoff
 - **User-Friendly Messages:** Clear error messages displayed to users
 - **Validation:** Wallet addresses validated on both client and server
@@ -261,10 +231,9 @@ CACHE_ENABLED=true
 
 ### Current Limitations
 
-1. **Read-Only:** POC only queries data, does not complete quests or award badges
+1. **Read-Only:** POC only queries data, does not complete quests
 2. **No Wallet Signature:** Direct wallet input, no authentication required
 3. **Points Breakdown:** API doesn't provide breakdown by source (bets/referrals/quests)
-4. **Badge Awards:** Relies on badge-type loyalty rules (may not cover all badge scenarios)
 
 ### User Group ID
 
@@ -284,7 +253,6 @@ The `SNAG_DEFAULT_USER_GROUP_ID` may not be required. If you encounter errors du
 - [ ] Query new wallet (auto-creates user)
 - [ ] Invalid wallet format shows error
 - [ ] Points display correctly
-- [ ] Badges render with dates
 - [ ] Quests show correct status icons
 - [ ] Partial failures show available data
 - [ ] No console errors
@@ -342,7 +310,6 @@ Potential improvements beyond the POC scope:
 - [ ] Add leaderboard ranking
 - [ ] Show points breakdown by source
 - [ ] Real-time quest verification polling
-- [ ] Badge gallery with images
 - [ ] Quest completion history timeline
 - [ ] User profile management
 

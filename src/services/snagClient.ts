@@ -23,8 +23,11 @@ export class SnagClient {
     params?: Record<string, any>,
     options: RequestOptions = {}
   ): Promise<T> {
+    logger.info(`snagClient: GET ${endpoint}`, { params });
     const url = this.buildUrl(endpoint, params);
-    return this.request<T>('GET', url, undefined, options);
+    const result = await this.request<T>('GET', url, undefined, options);
+    logger.info(`GET ${endpoint} response`, { data: result });
+    return result;
   }
 
   async post<T>(
@@ -32,8 +35,11 @@ export class SnagClient {
     body: Record<string, any>,
     options: RequestOptions = {}
   ): Promise<T> {
+    logger.info(`POST ${endpoint}`, { body });
     const url = this.buildUrl(endpoint);
-    return this.request<T>('POST', url, body, options);
+    const result = await this.request<T>('POST', url, body, options);
+    logger.info(`POST ${endpoint} response`, { data: result });
+    return result;
   }
 
   private async request<T>(
@@ -173,6 +179,8 @@ export class SnagClient {
             Object.entries(value).forEach(([nestedKey, nestedValue]) => {
               url.searchParams.append(`${key}[${nestedKey}]`, String(nestedValue));
             });
+          } else if (Array.isArray(value)) {
+            value.forEach((item: any) => url.searchParams.append(key, String(item)));
           } else {
             url.searchParams.append(key, String(value));
           }

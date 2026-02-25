@@ -37,22 +37,6 @@ async function fetchPoints(walletAddress) {
 }
 
 /**
- * Fetch badges only for a wallet address
- */
-async function fetchBadges(walletAddress) {
-  const response = await fetch(
-    `${API_BASE_URL}/api/loyalty/badges/${walletAddress}`
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'Failed to fetch badges');
-  }
-
-  return await response.json();
-}
-
-/**
  * Fetch quests with status for a wallet address
  */
 async function fetchQuests(walletAddress) {

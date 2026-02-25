@@ -4,10 +4,34 @@ import { logger } from '../utils/logger';
 import { AppError, ErrorCode, QuestWithStatus } from '../types/app.types';
 import {
   LoyaltyRule,
-  LoyaltyRulesResponse,
-  QuestStatusRequest,
-  QuestStatusResponse,
+  LoyaltyRuleGroupsResponse,
+  TransactionEntriesResponse,
 } from '../types/snag-api.types';
+
+/**
+ * Compute the next reset time for a repeatable quest based on its frequency.
+ * Returns undefined for one-time quests or unknown frequencies.
+ */
+function computeResetAt(completedAt: string, frequency?: string): string | undefined {
+  if (!frequency) return undefined;
+
+  const date = new Date(completedAt);
+
+  switch (frequency.toLowerCase()) {
+    case 'daily': {
+      // Start of next UTC day
+      date.setUTCHours(24, 0, 0, 0);
+      return date.toISOString();
+    }
+    case 'weekly': {
+      date.setUTCDate(date.getUTCDate() + 7);
+      date.setUTCHours(0, 0, 0, 0);
+      return date.toISOString();
+    }
+    default:
+      return undefined;
+  }
+}
 
 interface CacheEntry<T> {
   data: T;
@@ -18,7 +42,7 @@ export class QuestService {
   private questRulesCache: CacheEntry<LoyaltyRule[]> | null = null;
 
   /**
-   * Get all active quest rules from Snag API (with caching)
+   * Get all active quest rules from Snag API via rule_groups (with caching)
    */
   async getAllQuestRules(): Promise<LoyaltyRule[]> {
     // Check cache first
@@ -35,21 +59,38 @@ export class QuestService {
       }
     }
 
-    // Fetch from API
+    // Fetch from API via rule_groups (rules are embedded in loyaltyGroupItems)
     try {
-      logger.debug('Fetching quest rules from Snag API');
+      logger.debug('Fetching quest rules from Snag API via rule_groups');
 
-      const response = await snagClient.get<LoyaltyRulesResponse>(
-        '/api/loyalty/rules',
-        {
-          organizationId: snagConfig.organizationId,
-          websiteId: snagConfig.websiteId,
-          isActive: true,
-          limit: 100,
+      const rules: LoyaltyRule[] = [];
+      let startingAfter: string | undefined;
+
+      do {
+        const response = await snagClient.get<LoyaltyRuleGroupsResponse>(
+          '/api/loyalty/rule_groups',
+          {
+            organizationId: snagConfig.organizationId,
+            websiteId: snagConfig.websiteId,
+            limit: 100,
+            ...(startingAfter ? { startingAfter } : {}),
+          }
+        );
+
+        const groups = response.data || [];
+
+        for (const group of groups) {
+          for (const item of group.loyaltyGroupItems || []) {
+            if (item.loyaltyRule) {
+              rules.push(item.loyaltyRule);
+            }
+          }
         }
-      );
 
-      const rules = response.data || [];
+        startingAfter = response.hasNextPage && groups.length > 0
+          ? groups[groups.length - 1].id
+          : undefined;
+      } while (startingAfter);
 
       logger.info('Quest rules fetched successfully', { count: rules.length });
 
@@ -81,45 +122,12 @@ export class QuestService {
   }
 
   /**
-   * Check quest completion status for a specific wallet and rule
-   */
-  async getQuestStatus(
-    walletAddress: string,
-    ruleId: string
-  ): Promise<QuestStatusResponse> {
-    try {
-      const requestBody: QuestStatusRequest = {
-        walletAddress,
-        ruleId,
-      };
-
-      const response = await snagClient.post<QuestStatusResponse>(
-        '/api/loyalty/rules/status',
-        requestBody
-      );
-
-      return response;
-    } catch (error: any) {
-      logger.warn('Failed to check quest status', {
-        walletAddress,
-        ruleId,
-        error: error.message,
-      });
-
-      // Return unknown status rather than failing entire request
-      return {
-        status: 'failed',
-        completedAt: undefined,
-      };
-    }
-  }
-
-  /**
    * Get all quests with completion status for a wallet
    */
-  async getQuestsWithStatus(walletAddress: string): Promise<QuestWithStatus[]> {
+  async getQuestsWithStatus(walletAddress: string, userId: string): Promise<QuestWithStatus[]> {
     try {
-      // Get all quest rules
+      logger.info('QuestService: getQuestsWithStatus for ', walletAddress)
+      // Fetch quest rules first (cached after first call), then check completion status
       const rules = await this.getAllQuestRules();
 
       if (rules.length === 0) {
@@ -127,30 +135,71 @@ export class QuestService {
         return [];
       }
 
-      // Check status for each quest in parallel
-      logger.debug('Checking quest statuses in parallel', {
-        walletAddress,
-        questCount: rules.length,
+      const statusResponse = await snagClient.get<TransactionEntriesResponse>('/api/loyalty/transaction_entries', {
+        userId,
+        organizationId: snagConfig.organizationId,
+        websiteId: snagConfig.websiteId,
+        userCompletedLoyaltyRuleId: rules.map(r => r.id),
+        limit: 100,
       });
 
-      const statusPromises = rules.map(rule =>
-        this.getQuestStatus(walletAddress, rule.id)
-      );
+      // Aggregate all entries per rule ID — repeatable quests (e.g. daily check-in) can have
+      // multiple entries. We sum points and keep the most recent timestamps.
+      interface EntryAggregate {
+        completedAt: string;
+        pointsAwarded: number;
+        ctaHref?: string;
+        completionCount: number;
+      }
 
-      const statuses = await Promise.all(statusPromises);
+      const completedByRuleId = new Map<string, EntryAggregate>();
 
-      // Combine rule metadata with status
-      const questsWithStatus: QuestWithStatus[] = rules.map((rule, index) => {
-        const status = statuses[index];
+      for (const entry of statusResponse.data) {
+        const ruleId = entry.loyaltyTransaction?.loyaltyRule?.id;
+        if (!ruleId) continue;
 
+        const pointsForEntry = Math.round(Number(entry.amount) / 1_000_000);
+        const existing = completedByRuleId.get(ruleId);
+
+        if (!existing) {
+          completedByRuleId.set(ruleId, {
+            completedAt: entry.createdAt,
+            pointsAwarded: pointsForEntry,
+            ctaHref: entry.loyaltyTransaction?.loyaltyRule?.metadata?.cta?.href,
+            completionCount: 1,
+          });
+        } else {
+          existing.pointsAwarded += pointsForEntry;
+          existing.completionCount += 1;
+          if (entry.createdAt > existing.completedAt) {
+            existing.completedAt = entry.createdAt;
+          }
+        }
+      }
+
+      logger.debug('Quest statuses fetched', {
+        walletAddress,
+        total: rules.length,
+        completed: completedByRuleId.size,
+      });
+
+      // Combine rule metadata with status and aggregated entry data
+      const questsWithStatus: QuestWithStatus[] = rules.map(rule => {
+        const agg = completedByRuleId.get(rule.id);
         return {
           id: rule.id,
           name: rule.name,
           description: rule.description,
           type: rule.type,
           points: rule.amount || 0,
-          status: status.status,
-          completedAt: status.completedAt,
+          status: agg ? 'completed' : 'pending',
+          frequency: rule.frequency,
+          completedAt: agg?.completedAt,
+          pointsAwarded: agg?.pointsAwarded,
+          ctaHref: agg?.ctaHref,
+          resetAt: agg ? computeResetAt(agg.completedAt, rule.frequency) : undefined,
+          streakCount: agg?.completionCount,
+          completionCount: agg?.completionCount,
         };
       });
 

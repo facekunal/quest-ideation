@@ -72,41 +72,60 @@ export interface LoyaltyRule {
   description?: string;
   type: string;
   isActive: boolean;
-  rewardType?: 'points' | 'badge';
   amount?: number;
-  badgeId?: string;
   organizationId: string;
   websiteId: string;
-  metadata?: Record<string, any>;
+  frequency?: string;
+  interval?: string;
+  metadata?: {
+    enableStreaks?: boolean;
+    streakArray?: Array<{ streakMilestone: number; streakAmount: number }>;
+    [key: string]: any;
+  };
 }
 
-export interface LoyaltyRulesResponse {
-  data: LoyaltyRule[];
+// Rule Groups (GET /api/loyalty/rule_groups)
+export interface LoyaltyRuleGroupItem {
+  id: string;
+  sortId: number;
+  loyaltyRule: LoyaltyRule;
+  mediaUrl?: string | null;
 }
 
-export interface QuestStatusRequest {
-  walletAddress: string;
-  ruleId: string;
-}
-
-export interface QuestStatusResponse {
-  status: 'completed' | 'pending' | 'failed';
-  completedAt?: string;
-}
-
-// Badge Types
-export interface Badge {
+export interface LoyaltyRuleGroup {
   id: string;
   name: string;
-  description?: string;
-  imageUrl?: string;
-  organizationId: string;
-  websiteId: string;
-  createdAt?: string;
+  isRequired: boolean;
+  sortId: number;
+  isCollapsible: boolean;
+  subTitle?: string | null;
+  loyaltyGroupItems: LoyaltyRuleGroupItem[];
 }
 
-export interface BadgesResponse {
-  data: Badge[];
+export interface LoyaltyRuleGroupsResponse {
+  data: LoyaltyRuleGroup[];
+  hasNextPage?: boolean;
+}
+
+// Transaction Entries (GET /api/loyalty/transaction_entries)
+export interface TransactionEntry {
+  id: string;
+  amount: string;                         // scaled integer string, ÷1_000_000 = actual points
+  createdAt: string;                      // ISO timestamp of completion
+  loyaltyTransaction?: {
+    loyaltyRule?: {
+      id: string;
+      metadata?: {
+        cta?: { href?: string };
+        [key: string]: any;
+      };
+    };
+  };
+}
+
+export interface TransactionEntriesResponse {
+  data: TransactionEntry[];
+  hasNextPage?: boolean;
 }
 
 // Generic Snag API Response

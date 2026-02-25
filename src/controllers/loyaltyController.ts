@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { userService } from '../services/userService';
 import { pointsService } from '../services/pointsService';
-import { badgeService } from '../services/badgeService';
 import { questService } from '../services/questService';
 import { leaderboardService } from '../services/leaderboardService';
 import { logger } from '../utils/logger';
@@ -30,11 +29,10 @@ export class LoyaltyController {
       // Fetch all loyalty data in parallel
       const results = await Promise.allSettled([
         pointsService.getPointsByWallet(walletAddress),
-        badgeService.getUserBadges(walletAddress),
-        questService.getQuestsWithStatus(walletAddress),
+        questService.getQuestsWithStatus(walletAddress, user.userId),
       ]);
 
-      const [pointsResult, badgesResult, questsResult] = results;
+      const [pointsResult, questsResult] = results;
 
       // Build response with partial data support
       const response: LoyaltyData = {
@@ -46,16 +44,12 @@ export class LoyaltyController {
         points: {
           total: pointsResult.status === 'fulfilled' ? pointsResult.value.total : 0,
         },
-        badges: badgesResult.status === 'fulfilled' ? badgesResult.value : [],
         quests: questsResult.status === 'fulfilled' ? questsResult.value : [],
       };
 
       // Log any partial failures
       if (pointsResult.status === 'rejected') {
         logger.warn('Failed to fetch points', { error: pointsResult.reason });
-      }
-      if (badgesResult.status === 'rejected') {
-        logger.warn('Failed to fetch badges', { error: badgesResult.reason });
       }
       if (questsResult.status === 'rejected') {
         logger.warn('Failed to fetch quests', { error: questsResult.reason });
@@ -64,7 +58,6 @@ export class LoyaltyController {
       logger.info('Loyalty data retrieved successfully', {
         walletAddress,
         points: response.points.total,
-        badges: response.badges.length,
         quests: response.quests.length,
       });
 
@@ -146,29 +139,6 @@ export class LoyaltyController {
   }
 
   /**
-   * Get badges only for a wallet address
-   * GET /api/loyalty/badges/:walletAddress
-   */
-  async getBadges(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
-    try {
-      const { walletAddress } = req.params;
-      validateWalletAddress(walletAddress);
-
-      // Ensure user exists first
-      await userService.ensureUserExists(walletAddress);
-
-      const badges = await badgeService.getUserBadges(walletAddress);
-      res.json({ walletAddress, badges });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
    * Get quests with status for a wallet address
    * GET /api/loyalty/quests/:walletAddress
    */
@@ -182,9 +152,9 @@ export class LoyaltyController {
       validateWalletAddress(walletAddress);
 
       // Ensure user exists first
-      await userService.ensureUserExists(walletAddress);
+      const user = await userService.ensureUserExists(walletAddress);
 
-      const quests = await questService.getQuestsWithStatus(walletAddress);
+      const quests = await questService.getQuestsWithStatus(walletAddress, user.userId);
       res.json({ walletAddress, quests });
     } catch (error) {
       next(error);
