@@ -82,25 +82,59 @@ export interface LoyaltyRule {
     streakArray?: Array<{ streakMilestone: number; streakAmount: number }>;
     [key: string]: any;
   };
-  loyaltyAccountStreaks?: Array<{
-    streakCount: number;
-    expiresAt: string;
-  }>;
 }
 
-export interface LoyaltyRulesResponse {
-  data: LoyaltyRule[];
+// Rule Groups (GET /api/loyalty/rule_groups)
+export interface LoyaltyRuleGroupItem {
+  id: string;
+  sortId: number;
+  loyaltyRule: LoyaltyRule;
+  mediaUrl?: string | null;
 }
 
-export interface CompletedQuestEntry {
+export interface LoyaltyRuleGroup {
+  id: string;
+  name: string;
+  isRequired: boolean;
+  sortId: number;
+  isCollapsible: boolean;
+  subTitle?: string | null;
+  loyaltyGroupItems: LoyaltyRuleGroupItem[];
+}
+
+export interface LoyaltyRuleGroupsResponse {
+  data: LoyaltyRuleGroup[];
+  hasNextPage?: boolean;
+}
+
+// Transaction Entries (GET /api/loyalty/transaction_entries)
+export interface TransactionEntry {
+  id: string;
+  loyaltyTransaction?: {
+    loyaltyRule?: {
+      id: string;
+    };
+  };
+}
+
+export interface TransactionEntriesResponse {
+  data: TransactionEntry[];
+  hasNextPage?: boolean;
+}
+
+// Rule Statuses (GET /api/loyalty/rule_statuses)
+export interface RuleStatus {
+  id: string;
   loyaltyRuleId: string;
   userId: string;
-  status: 'completed';
-  message?: string;
+  progress: number; // 0–100
+  organizationId: string;
+  websiteId: string;
 }
 
-export interface QuestStatusBatchResponse {
-  data: CompletedQuestEntry[];
+export interface RuleStatusesResponse {
+  data: RuleStatus[];
+  hasNextPage?: boolean;
 }
 
 // Generic Snag API Response

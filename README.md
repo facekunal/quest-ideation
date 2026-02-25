@@ -165,10 +165,9 @@ snag-api-poc/
 4. **User auto-creation:** If wallet doesn't exist in Snag, a new user is created
 5. **Parallel data fetching:**
    - Points from `/api/loyalty/accounts`
-   - Badges via badge-type loyalty rules
    - Quests from `/api/loyalty/rules` with status checks
 6. **Response aggregation:** All data combined into single response
-7. **Frontend renders** points, badges, and quests with status icons
+7. **Frontend renders** points and quests with status icons
 
 ### Auto-Create Users
 
@@ -209,30 +208,11 @@ const quests = rules.map(rule => ({
 }));
 ```
 
-### Badge Filtering
-
-Badges are filtered by checking badge-type loyalty rules:
-
-```typescript
-// 1. Fetch badges, badge rules, and completed statuses in parallel
-const [allBadges, badgeRules, statusResponse] = await Promise.all([
-  snagClient.get('/api/loyalty/badges'),
-  snagClient.get('/api/loyalty/rules', { rewardType: 'badge' }),
-  snagClient.get('/api/loyalty/rules/status', { userId, organizationId, websiteId }),
-]);
-
-// 2. Filter to completed badge rules and map to badge metadata
-const completedRuleIds = new Set(statusResponse.data.map(e => e.loyaltyRuleId));
-const userBadges = badgeRules
-  .filter(rule => completedRuleIds.has(rule.id) && rule.badgeId)
-  .map(rule => allBadges.find(b => b.id === rule.badgeId));
-```
-
 ## Error Handling
 
 The POC implements graceful error handling:
 
-- **Partial Data Display:** If one service fails (e.g., badges), other data (points, quests) is still shown
+- **Partial Data Display:** If one service fails (e.g., points), other data (quests) is still shown
 - **Retry Logic:** Snag API calls retry up to 2 times on 5xx errors with exponential backoff
 - **User-Friendly Messages:** Clear error messages displayed to users
 - **Validation:** Wallet addresses validated on both client and server
@@ -251,10 +231,9 @@ CACHE_ENABLED=true
 
 ### Current Limitations
 
-1. **Read-Only:** POC only queries data, does not complete quests or award badges
+1. **Read-Only:** POC only queries data, does not complete quests
 2. **No Wallet Signature:** Direct wallet input, no authentication required
 3. **Points Breakdown:** API doesn't provide breakdown by source (bets/referrals/quests)
-4. **Badge Awards:** Relies on badge-type loyalty rules (may not cover all badge scenarios)
 
 ### User Group ID
 
@@ -274,7 +253,6 @@ The `SNAG_DEFAULT_USER_GROUP_ID` may not be required. If you encounter errors du
 - [ ] Query new wallet (auto-creates user)
 - [ ] Invalid wallet format shows error
 - [ ] Points display correctly
-- [ ] Badges render with dates
 - [ ] Quests show correct status icons
 - [ ] Partial failures show available data
 - [ ] No console errors
@@ -332,7 +310,6 @@ Potential improvements beyond the POC scope:
 - [ ] Add leaderboard ranking
 - [ ] Show points breakdown by source
 - [ ] Real-time quest verification polling
-- [ ] Badge gallery with images
 - [ ] Quest completion history timeline
 - [ ] User profile management
 

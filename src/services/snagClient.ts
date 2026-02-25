@@ -175,6 +175,8 @@ export class SnagClient {
             Object.entries(value).forEach(([nestedKey, nestedValue]) => {
               url.searchParams.append(`${key}[${nestedKey}]`, String(nestedValue));
             });
+          } else if (Array.isArray(value)) {
+            value.forEach((item: any) => url.searchParams.append(key, String(item)));
           } else {
             url.searchParams.append(key, String(value));
           }

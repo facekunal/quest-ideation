@@ -4,8 +4,9 @@ import { logger } from '../utils/logger';
 import { AppError, ErrorCode, QuestWithStatus } from '../types/app.types';
 import {
   LoyaltyRule,
-  LoyaltyRulesResponse,
-  QuestStatusBatchResponse,
+  LoyaltyRuleGroupsResponse,
+  TransactionEntriesResponse,
+  RuleStatusesResponse,
 } from '../types/snag-api.types';
 
 interface CacheEntry<T> {
@@ -17,7 +18,7 @@ export class QuestService {
   private questRulesCache: CacheEntry<LoyaltyRule[]> | null = null;
 
   /**
-   * Get all active quest rules from Snag API (with caching)
+   * Get all active quest rules from Snag API via rule_groups (with caching)
    */
   async getAllQuestRules(): Promise<LoyaltyRule[]> {
     // Check cache first
@@ -34,21 +35,38 @@ export class QuestService {
       }
     }
 
-    // Fetch from API
+    // Fetch from API via rule_groups (rules are embedded in loyaltyGroupItems)
     try {
-      logger.debug('Fetching quest rules from Snag API');
+      logger.debug('Fetching quest rules from Snag API via rule_groups');
 
-      const response = await snagClient.get<LoyaltyRulesResponse>(
-        '/api/loyalty/rules',
-        {
-          organizationId: snagConfig.organizationId,
-          websiteId: snagConfig.websiteId,
-          isActive: true,
-          limit: 100,
+      const rules: LoyaltyRule[] = [];
+      let startingAfter: string | undefined;
+
+      do {
+        const response = await snagClient.get<LoyaltyRuleGroupsResponse>(
+          '/api/loyalty/rule_groups',
+          {
+            organizationId: snagConfig.organizationId,
+            websiteId: snagConfig.websiteId,
+            limit: 100,
+            ...(startingAfter ? { startingAfter } : {}),
+          }
+        );
+
+        const groups = response.data || [];
+
+        for (const group of groups) {
+          for (const item of group.loyaltyGroupItems || []) {
+            if (item.loyaltyRule) {
+              rules.push(item.loyaltyRule);
+            }
+          }
         }
-      );
 
-      const rules = response.data || [];
+        startingAfter = response.hasNextPage && groups.length > 0
+          ? groups[groups.length - 1].id
+          : undefined;
+      } while (startingAfter);
 
       logger.info('Quest rules fetched successfully', { count: rules.length });
 
@@ -85,24 +103,53 @@ export class QuestService {
   async getQuestsWithStatus(walletAddress: string, userId: string): Promise<QuestWithStatus[]> {
     try {
       logger.info('QuestService: getQuestsWithStatus for ', walletAddress)
-      // Fetch all quest rules and completed statuses in parallel
-      const [rules, statusResponse] = await Promise.all([
-        this.getAllQuestRules(),
-        snagClient.get<QuestStatusBatchResponse>('/api/loyalty/rules/status', {
-          userId,
-          organizationId: snagConfig.organizationId,
-          websiteId: snagConfig.websiteId,
-        }),
-      ]);
+      // Fetch quest rules first (cached after first call), then check completion status
+      const rules = await this.getAllQuestRules();
 
       if (rules.length === 0) {
         logger.info('No quest rules available');
         return [];
       }
 
+      const [statusResult, progressResult] = await Promise.allSettled([
+        snagClient.get<TransactionEntriesResponse>('/api/loyalty/transaction_entries', {
+          userId,
+          organizationId: snagConfig.organizationId,
+          websiteId: snagConfig.websiteId,
+          userCompletedLoyaltyRuleId: rules.map(r => r.id),
+          limit: 100,
+        }),
+        snagClient.get<RuleStatusesResponse>('/api/loyalty/rule_statuses', {
+          userId,
+          organizationId: snagConfig.organizationId,
+          websiteId: snagConfig.websiteId,
+          limit: 100,
+        }),
+      ]);
+
+      if (statusResult.status === 'rejected') {
+        throw statusResult.reason;
+      }
+
+      if (progressResult.status === 'rejected') {
+        logger.warn('Failed to fetch rule statuses (progress will be omitted)', {
+          error: progressResult.reason?.message,
+        });
+      }
+
+      const statusResponse = statusResult.value;
+      const progressData = progressResult.status === 'fulfilled' ? progressResult.value.data : [];
+
       // Build a set of completed rule IDs for O(1) lookup
+      // Presence of a transaction entry for a rule ID means the user completed it
       const completedRuleIds = new Set(
-        statusResponse.data.map(e => e.loyaltyRuleId)
+        statusResponse.data
+          .map((e) => e.loyaltyTransaction?.loyaltyRule?.id)
+          .filter((id): id is string => Boolean(id))
+      );
+
+      const progressByRuleId = new Map(
+        progressData.map(s => [s.loyaltyRuleId, s.progress])
       );
 
       logger.debug('Quest statuses fetched', {
@@ -113,14 +160,6 @@ export class QuestService {
 
       // Combine rule metadata with status
       const questsWithStatus: QuestWithStatus[] = rules.map(rule => {
-        const streak = rule.loyaltyAccountStreaks?.[0];
-        const enableStreaks = rule.metadata?.enableStreaks;
-        const streakArray = rule.metadata?.streakArray || [];
-        const currentCount = streak?.streakCount ?? 0;
-        const nextMilestone = streakArray
-          .filter(s => s.streakMilestone > currentCount)
-          .sort((a, b) => a.streakMilestone - b.streakMilestone)[0];
-
         return {
           id: rule.id,
           name: rule.name,
@@ -129,10 +168,7 @@ export class QuestService {
           points: rule.amount || 0,
           status: completedRuleIds.has(rule.id) ? 'completed' : 'pending',
           frequency: rule.frequency,
-          streakCount: enableStreaks && streak && streak.streakCount > 0 ? streak.streakCount : undefined,
-          resetAt: streak?.expiresAt,
-          nextStreakMilestone: nextMilestone?.streakMilestone,
-          nextStreakBonus: nextMilestone ? nextMilestone.streakAmount / 1_000_000 : undefined,
+          progress: progressByRuleId.get(rule.id),
         };
       });
 
