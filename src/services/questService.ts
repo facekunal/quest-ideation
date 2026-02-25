@@ -5,8 +5,7 @@ import { AppError, ErrorCode, QuestWithStatus } from '../types/app.types';
 import {
   LoyaltyRule,
   LoyaltyRulesResponse,
-  QuestStatusRequest,
-  QuestStatusResponse,
+  QuestStatusBatchResponse,
 } from '../types/snag-api.types';
 
 interface CacheEntry<T> {
@@ -81,68 +80,38 @@ export class QuestService {
   }
 
   /**
-   * Check quest completion status for a specific wallet and rule
-   */
-  async getQuestStatus(
-    walletAddress: string,
-    ruleId: string
-  ): Promise<QuestStatusResponse> {
-    try {
-      const requestBody: QuestStatusRequest = {
-        walletAddress,
-        ruleId,
-      };
-
-      const response = await snagClient.post<QuestStatusResponse>(
-        '/api/loyalty/rules/status',
-        requestBody
-      );
-
-      return response;
-    } catch (error: any) {
-      logger.warn('Failed to check quest status', {
-        walletAddress,
-        ruleId,
-        error: error.message,
-      });
-
-      // Return unknown status rather than failing entire request
-      return {
-        status: 'failed',
-        completedAt: undefined,
-      };
-    }
-  }
-
-  /**
    * Get all quests with completion status for a wallet
    */
-  async getQuestsWithStatus(walletAddress: string): Promise<QuestWithStatus[]> {
+  async getQuestsWithStatus(walletAddress: string, userId: string): Promise<QuestWithStatus[]> {
     try {
-      // Get all quest rules
-      const rules = await this.getAllQuestRules();
+      // Fetch all quest rules and completed statuses in parallel
+      const [rules, statusResponse] = await Promise.all([
+        this.getAllQuestRules(),
+        snagClient.get<QuestStatusBatchResponse>('/api/loyalty/rules/status', {
+          userId,
+          organizationId: snagConfig.organizationId,
+          websiteId: snagConfig.websiteId,
+        }),
+      ]);
 
       if (rules.length === 0) {
         logger.info('No quest rules available');
         return [];
       }
 
-      // Check status for each quest in parallel
-      logger.debug('Checking quest statuses in parallel', {
-        walletAddress,
-        questCount: rules.length,
-      });
-
-      const statusPromises = rules.map(rule =>
-        this.getQuestStatus(walletAddress, rule.id)
+      // Build a set of completed rule IDs for O(1) lookup
+      const completedRuleIds = new Set(
+        statusResponse.data.map(e => e.loyaltyRuleId)
       );
 
-      const statuses = await Promise.all(statusPromises);
+      logger.debug('Quest statuses fetched', {
+        walletAddress,
+        total: rules.length,
+        completed: completedRuleIds.size,
+      });
 
       // Combine rule metadata with status
-      const questsWithStatus: QuestWithStatus[] = rules.map((rule, index) => {
-        const status = statuses[index];
-
+      const questsWithStatus: QuestWithStatus[] = rules.map(rule => {
         const streak = rule.loyaltyAccountStreaks?.[0];
         const enableStreaks = rule.metadata?.enableStreaks;
         const streakArray = rule.metadata?.streakArray || [];
@@ -157,8 +126,7 @@ export class QuestService {
           description: rule.description,
           type: rule.type,
           points: rule.amount || 0,
-          status: status.status,
-          completedAt: status.completedAt,
+          status: completedRuleIds.has(rule.id) ? 'completed' : 'pending',
           frequency: rule.frequency,
           streakCount: enableStreaks && streak && streak.streakCount > 0 ? streak.streakCount : undefined,
           resetAt: streak?.expiresAt,

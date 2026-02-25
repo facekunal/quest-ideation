@@ -94,14 +94,15 @@ export interface LoyaltyRulesResponse {
   data: LoyaltyRule[];
 }
 
-export interface QuestStatusRequest {
-  walletAddress: string;
-  ruleId: string;
+export interface CompletedQuestEntry {
+  loyaltyRuleId: string;
+  userId: string;
+  status: 'completed';
+  message?: string;
 }
 
-export interface QuestStatusResponse {
-  status: 'completed' | 'pending' | 'failed';
-  completedAt?: string;
+export interface QuestStatusBatchResponse {
+  data: CompletedQuestEntry[];
 }
 
 // Badge Types

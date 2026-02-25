@@ -30,8 +30,8 @@ export class LoyaltyController {
       // Fetch all loyalty data in parallel
       const results = await Promise.allSettled([
         pointsService.getPointsByWallet(walletAddress),
-        badgeService.getUserBadges(walletAddress),
-        questService.getQuestsWithStatus(walletAddress),
+        badgeService.getUserBadges(walletAddress, user.userId),
+        questService.getQuestsWithStatus(walletAddress, user.userId),
       ]);
 
       const [pointsResult, badgesResult, questsResult] = results;
@@ -159,9 +159,9 @@ export class LoyaltyController {
       validateWalletAddress(walletAddress);
 
       // Ensure user exists first
-      await userService.ensureUserExists(walletAddress);
+      const user = await userService.ensureUserExists(walletAddress);
 
-      const badges = await badgeService.getUserBadges(walletAddress);
+      const badges = await badgeService.getUserBadges(walletAddress, user.userId);
       res.json({ walletAddress, badges });
     } catch (error) {
       next(error);
@@ -182,9 +182,9 @@ export class LoyaltyController {
       validateWalletAddress(walletAddress);
 
       // Ensure user exists first
-      await userService.ensureUserExists(walletAddress);
+      const user = await userService.ensureUserExists(walletAddress);
 
-      const quests = await questService.getQuestsWithStatus(walletAddress);
+      const quests = await questService.getQuestsWithStatus(walletAddress, user.userId);
       res.json({ walletAddress, quests });
     } catch (error) {
       next(error);

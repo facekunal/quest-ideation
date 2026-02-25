@@ -7,7 +7,7 @@ import {
   BadgesResponse,
   LoyaltyRule,
   LoyaltyRulesResponse,
-  QuestStatusResponse,
+  QuestStatusBatchResponse,
 } from '../types/snag-api.types';
 
 export class BadgeService {
@@ -66,42 +66,21 @@ export class BadgeService {
   }
 
   /**
-   * Check badge rule completion status
-   */
-  private async checkBadgeRuleStatus(
-    walletAddress: string,
-    ruleId: string
-  ): Promise<QuestStatusResponse> {
-    try {
-      const response = await snagClient.post<QuestStatusResponse>(
-        '/api/loyalty/rules/status',
-        {
-          walletAddress,
-          ruleId,
-        }
-      );
-      return response;
-    } catch (error: any) {
-      logger.warn('Failed to check badge rule status', {
-        walletAddress,
-        ruleId,
-        error: error.message,
-      });
-      return { status: 'failed' };
-    }
-  }
-
-  /**
    * Get user-specific badges by checking badge rule completion status
    */
-  async getUserBadges(walletAddress: string): Promise<UserBadge[]> {
+  async getUserBadges(walletAddress: string, userId: string): Promise<UserBadge[]> {
     try {
       logger.debug('Fetching user badges', { walletAddress });
 
-      // Get all badges and badge rules in parallel
-      const [allBadges, badgeRules] = await Promise.all([
+      // Get all badges, badge rules, and completion statuses in parallel
+      const [allBadges, badgeRules, statusResponse] = await Promise.all([
         this.getAllBadges(),
         this.getBadgeRules(),
+        snagClient.get<QuestStatusBatchResponse>('/api/loyalty/rules/status', {
+          userId,
+          organizationId: snagConfig.organizationId,
+          websiteId: snagConfig.websiteId,
+        }),
       ]);
 
       if (badgeRules.length === 0) {
@@ -109,20 +88,15 @@ export class BadgeService {
         return [];
       }
 
-      // Check completion status for each badge rule
-      const statusChecks = badgeRules.map(rule =>
-        this.checkBadgeRuleStatus(walletAddress, rule.id)
+      const completedRuleIds = new Set(
+        statusResponse.data.map(e => e.loyaltyRuleId)
       );
-      const statuses = await Promise.all(statusChecks);
 
       // Filter to completed badge rules and map to badges
       const userBadges: UserBadge[] = [];
 
-      for (let i = 0; i < badgeRules.length; i++) {
-        const rule = badgeRules[i];
-        const status = statuses[i];
-
-        if (status.status === 'completed' && rule.badgeId) {
+      for (const rule of badgeRules) {
+        if (completedRuleIds.has(rule.id) && rule.badgeId) {
           // Find the corresponding badge metadata
           const badge = allBadges.find(b => b.id === rule.badgeId);
 
@@ -132,7 +106,7 @@ export class BadgeService {
               name: badge.name,
               description: badge.description,
               imageUrl: badge.imageUrl,
-              awardedAt: status.completedAt || new Date().toISOString(),
+              awardedAt: new Date().toISOString(),
             });
           } else {
             // Badge metadata not found, use rule info
@@ -145,7 +119,7 @@ export class BadgeService {
               name: rule.name,
               description: rule.description,
               imageUrl: undefined,
-              awardedAt: status.completedAt || new Date().toISOString(),
+              awardedAt: new Date().toISOString(),
             });
           }
         }
