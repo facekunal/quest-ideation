@@ -88,7 +88,6 @@ function renderLoyaltyData(data) {
 
   // Render each section
   renderPoints(data.points);
-  renderBadges(data.badges);
   renderQuests(data.quests);
 
   // Show results container
@@ -192,50 +191,6 @@ function renderLeaderboard() {
       `;
     })
     .join('');
-}
-
-/**
- * Render badges section
- */
-function renderBadges(badges) {
-  const container = document.getElementById('badges-container');
-  const countElement = document.getElementById('badges-count');
-
-  container.innerHTML = '';
-  countElement.textContent = badges.length;
-
-  if (badges.length === 0) {
-    container.innerHTML = '<p class="empty-state">No badges earned yet</p>';
-    return;
-  }
-
-  badges.forEach(badge => {
-    const badgeCard = createBadgeCard(badge);
-    container.appendChild(badgeCard);
-  });
-}
-
-/**
- * Create badge card element
- */
-function createBadgeCard(badge) {
-  const card = document.createElement('div');
-  card.className = 'badge-card';
-
-  const iconHtml = badge.imageUrl
-    ? `<img src="${badge.imageUrl}" alt="${badge.name}">`
-    : '🏅';
-
-  card.innerHTML = `
-    <div class="badge-icon">${iconHtml}</div>
-    <div class="badge-info">
-      <h4>${escapeHtml(badge.name)}</h4>
-      ${badge.description ? `<p>${escapeHtml(badge.description)}</p>` : ''}
-      <span class="badge-date">Earned: ${formatDate(badge.awardedAt)}</span>
-    </div>
-  `;
-
-  return card;
 }
 
 /**

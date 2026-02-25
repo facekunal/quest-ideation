@@ -72,9 +72,7 @@ export interface LoyaltyRule {
   description?: string;
   type: string;
   isActive: boolean;
-  rewardType?: 'points' | 'badge';
   amount?: number;
-  badgeId?: string;
   organizationId: string;
   websiteId: string;
   frequency?: string;
@@ -103,21 +101,6 @@ export interface CompletedQuestEntry {
 
 export interface QuestStatusBatchResponse {
   data: CompletedQuestEntry[];
-}
-
-// Badge Types
-export interface Badge {
-  id: string;
-  name: string;
-  description?: string;
-  imageUrl?: string;
-  organizationId: string;
-  websiteId: string;
-  createdAt?: string;
-}
-
-export interface BadgesResponse {
-  data: Badge[];
 }
 
 // Generic Snag API Response

@@ -30,14 +30,6 @@ export interface AccountRankData {
   rank: number | string;
 }
 
-export interface UserBadge {
-  id: string;
-  name: string;
-  description?: string;
-  imageUrl?: string;
-  awardedAt: string;
-}
-
 export interface QuestWithStatus {
   id: string;
   name: string;
@@ -62,7 +54,6 @@ export interface LoyaltyData {
   points: {
     total: number;
   };
-  badges: UserBadge[];
   quests: QuestWithStatus[];
 }
 
@@ -76,8 +67,6 @@ export interface PartialLoyaltyData {
     total: number;
   };
   pointsError?: string | null;
-  badges?: UserBadge[];
-  badgesError?: string | null;
   quests?: QuestWithStatus[];
   questsError?: string | null;
 }
@@ -96,7 +85,6 @@ export enum ErrorCode {
 
   // Service-specific
   POINTS_FETCH_FAILED = 'POINTS_FETCH_FAILED',
-  BADGES_FETCH_FAILED = 'BADGES_FETCH_FAILED',
   QUESTS_FETCH_FAILED = 'QUESTS_FETCH_FAILED',
 
   // Configuration

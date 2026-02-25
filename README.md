@@ -1,13 +1,12 @@
 # Snag API POC
 
-A proof-of-concept demonstrating Snag API integration for querying user loyalty data (points, badges, social quests) by wallet address without wallet provider popups.
+A proof-of-concept demonstrating Snag API integration for querying user loyalty data (points, social quests) by wallet address without wallet provider popups.
 
 ## Features
 
 ✅ **Direct Wallet Input** - Query loyalty data by entering any wallet address
 ✅ **Auto-Create Users** - Automatically creates Snag users if wallet doesn't exist
 ✅ **Points Display** - Shows total loyalty points balance
-✅ **Badges** - Displays earned badges with award timestamps
 ✅ **Social Quests** - Lists all quests with completion status
 ✅ **Dynamic Quest Rules** - Fetches quest rules from Snag API (not hard-coded)
 ✅ **Leaderboard** - Displays top accounts by points with pagination
@@ -93,9 +92,8 @@ http://localhost:3000
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check endpoint |
-| `/api/loyalty/wallet/:walletAddress` | GET | Get all loyalty data (points + badges + quests) |
+| `/api/loyalty/wallet/:walletAddress` | GET | Get all loyalty data (points + quests) |
 | `/api/loyalty/points/:walletAddress` | GET | Get points only |
-| `/api/loyalty/badges/:walletAddress` | GET | Get badges only |
 | `/api/loyalty/quests/:walletAddress` | GET | Get quests with status |
 | `/api/loyalty/quests` | GET | Get all available quest rules |
 | `/api/loyalty/leaderboard` | GET | Get leaderboard entries sorted by points |
@@ -132,7 +130,6 @@ snag-api-poc/
 │   │   ├── snagClient.ts            # HTTP client with auth & retries
 │   │   ├── userService.ts           # User lookup & auto-creation
 │   │   ├── pointsService.ts         # Points queries
-│   │   ├── badgeService.ts          # Badge queries
 │   │   └── questService.ts          # Quest rules & status
 │   ├── controllers/
 │   │   └── loyaltyController.ts     # Request handlers
