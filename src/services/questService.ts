@@ -143,6 +143,14 @@ export class QuestService {
       const questsWithStatus: QuestWithStatus[] = rules.map((rule, index) => {
         const status = statuses[index];
 
+        const streak = rule.loyaltyAccountStreaks?.[0];
+        const enableStreaks = rule.metadata?.enableStreaks;
+        const streakArray = rule.metadata?.streakArray || [];
+        const currentCount = streak?.streakCount ?? 0;
+        const nextMilestone = streakArray
+          .filter(s => s.streakMilestone > currentCount)
+          .sort((a, b) => a.streakMilestone - b.streakMilestone)[0];
+
         return {
           id: rule.id,
           name: rule.name,
@@ -151,6 +159,11 @@ export class QuestService {
           points: rule.amount || 0,
           status: status.status,
           completedAt: status.completedAt,
+          frequency: rule.frequency,
+          streakCount: enableStreaks && streak && streak.streakCount > 0 ? streak.streakCount : undefined,
+          resetAt: streak?.expiresAt,
+          nextStreakMilestone: nextMilestone?.streakMilestone,
+          nextStreakBonus: nextMilestone ? nextMilestone.streakAmount / 1_000_000 : undefined,
         };
       });
 

@@ -268,6 +268,7 @@ function createQuestItem(quest) {
 
   const statusIcon = getStatusIcon(quest.status);
   const statusText = getStatusText(quest);
+  const checkInExtra = quest.type === 'check_in' ? buildCheckInInfo(quest) : '';
 
   item.innerHTML = `
     <div class="quest-header">
@@ -279,6 +280,7 @@ function createQuestItem(quest) {
     </div>
     ${quest.description ? `<div class="quest-description">${escapeHtml(quest.description)}</div>` : ''}
     <div class="quest-status">${statusText}</div>
+    ${checkInExtra}
   `;
 
   return item;
@@ -313,6 +315,46 @@ function getStatusText(quest) {
   };
 
   return `Status: ${statusLabels[quest.status] || 'Unknown'}`;
+}
+
+/**
+ * Build check-in specific info (streak, reset timer, milestone)
+ */
+function buildCheckInInfo(quest) {
+  const parts = [];
+
+  if (quest.streakCount != null) {
+    parts.push(`<span class="streak-badge">🔥 ${quest.streakCount}-day streak</span>`);
+  }
+
+  if (quest.resetAt) {
+    const timeLeft = getTimeUntil(quest.resetAt);
+    if (timeLeft) {
+      parts.push(`<span class="reset-timer">Resets in ${timeLeft}</span>`);
+    }
+  }
+
+  if (quest.nextStreakMilestone != null) {
+    parts.push(
+      `<span class="streak-milestone">Next milestone: ${quest.nextStreakMilestone} days → +${quest.nextStreakBonus} pts</span>`
+    );
+  }
+
+  return parts.length > 0 ? `<div class="check-in-info">${parts.join('')}</div>` : '';
+}
+
+/**
+ * Get human-readable time remaining until an ISO timestamp
+ */
+function getTimeUntil(isoString) {
+  const diff = new Date(isoString) - new Date();
+  if (diff <= 0) return null;
+
+  const hours = Math.floor(diff / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
 }
 
 /**

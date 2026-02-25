@@ -428,6 +428,41 @@ button:disabled {
   margin-top: 8px;
 }
 
+.check-in-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.streak-badge {
+  background: #fff3e0;
+  border: 1px solid #ff9800;
+  color: #e65100;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.reset-timer {
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+  color: #2e7d32;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+
+.streak-milestone {
+  background: #f3e5f5;
+  border: 1px solid #9c27b0;
+  color: #6a1b9a;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+
 /* Footer */
 footer {
   background: #f8f9fa;

@@ -46,6 +46,11 @@ export interface QuestWithStatus {
   points: number;
   status: 'completed' | 'pending' | 'failed' | 'unknown';
   completedAt?: string;
+  frequency?: string;
+  streakCount?: number;
+  resetAt?: string;
+  nextStreakMilestone?: number;
+  nextStreakBonus?: number;
 }
 
 export interface LoyaltyData {

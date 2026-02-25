@@ -77,7 +77,17 @@ export interface LoyaltyRule {
   badgeId?: string;
   organizationId: string;
   websiteId: string;
-  metadata?: Record<string, any>;
+  frequency?: string;
+  interval?: string;
+  metadata?: {
+    enableStreaks?: boolean;
+    streakArray?: Array<{ streakMilestone: number; streakAmount: number }>;
+    [key: string]: any;
+  };
+  loyaltyAccountStreaks?: Array<{
+    streakCount: number;
+    expiresAt: string;
+  }>;
 }
 
 export interface LoyaltyRulesResponse {
